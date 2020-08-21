@@ -51,12 +51,16 @@ class MyCohaCrmApi {
     }
 
     public static function getParams($params) {
+        $email = self::getParam($params, 'email');
+        $phone = self::getParam($params, 'phone');
+
         return [
             'person' => [
                 'title'         => self::getParam($params, 'title'),
                 'first_name'    => self::getParam($params, 'first_name'),
                 'name'          => self::getParam($params, 'name'),
-                'email'         => self::getParam($params, 'email'),
+                'email'         => $email,
+                'phone'         => $phone,
                 'company'       => self::getParam($params, 'company'),
                 'background'    => self::getParam($params, 'background'),
 
@@ -65,6 +69,22 @@ class MyCohaCrmApi {
                         'id' => '',
                         'company_id' => '',
                         'company_name' => self::getParam($params, 'company_name'),
+                    ]
+                ],
+
+                "tels_attributes" => [
+                    [
+                        "id" => '',
+                        "name" => $phone,
+                        // "atype" => "office"
+                    ]
+                ],
+
+                "emails_attributes" => [
+                    [
+                        "id" => '',
+                        "name" => $email,
+                        // "atype" => "office"
                     ]
                 ],
 
@@ -95,23 +115,26 @@ class MyCohaCrmApi {
 
             case 'email':
                 return $params['email'] ?? $params['e_mail'] ?? $params['mail'] ?? '';
+
+            case 'phone':
+                return $params['phone'] ?? $params['telefon'] ?? $params['mobile'] ?? '';
             
             case 'company':
-                return $params['unternehmen'] ?? $params['company'] ?? '';
-            
+            case 'company_name':
+                return $params['unternehmen'] ?? $params['company'] ?? $params['company_name'];
+
             case 'background':
                 $r = '';
 
                 $b = array_key_exists('betreff', $params);
                 $k = array_key_exists('kommentar', $params);
 
-                $r .= $b ? 'Betreff: ' . $params['betreff'] : '';
-                $r .= $b && $k ? ' | ' : '';
-                $r .= $k ? 'Kommentar: ' . $params['kommentar'] : '';
+                $r .= $b ? 'Betreff: "'.$params['betreff'].'"' : '';
+                $r .= $b && $k ? ".\r\n" : '';
+                $r .= $k ? 'Kommentar: "'.$params['kommentar'].'"' : '';
+
+                $r .= ". \r\n\r\n\r\nAlle Formular-Parameter: " . self::getFormDataAsString($params);
                 return $r;
-            
-            case 'company_name':
-                return $params['unternehmen'] ?? '';
             
             case 'form_tag':
                 return 'form-id-' . ($params['id'] ?? '');
@@ -119,6 +142,37 @@ class MyCohaCrmApi {
             default:
                 return '';
         }
+    }
+
+    public static function getFormDataAsString($params) {
+        $cleared = $params;
+
+        // Clear Params
+        unset($cleared["__csrf_token"]);
+        unset($cleared["_csrf_token"]);
+        unset($cleared["csrf_token"]);
+        unset($cleared["__csrf"]);
+        unset($cleared["_csrf"]);
+        unset($cleared["csrf"]);
+        unset($cleared["__token"]);
+        unset($cleared["_token"]);
+        unset($cleared["token"]);
+
+        // Clear from Captchas
+        unset($cleared["captchaName"]);
+        unset($cleared["captcha_name"]);
+        unset($cleared["captcha"]);
+
+        // Clear from Submit
+        unset($cleared["Submit"]);
+        unset($cleared["submit"]);
+
+        // Clear from Forcemails
+        unset($cleared["forceMail"]);
+        unset($cleared["force_mail"]);
+
+        // Return Cleared Params
+        return json_encode($cleared, JSON_PRETTY_PRINT);
     }
 
     public static function log($filename = 'default-error-log.log', $content = '', $timestamp = '') {
